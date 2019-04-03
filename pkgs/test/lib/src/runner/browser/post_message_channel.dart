@@ -5,10 +5,12 @@
 @JS()
 library test.src.runner.browser.post_message_channel;
 
+import 'dart:async';
 import 'dart:html';
 import 'dart:js_util';
 
 import 'package:js/js.dart';
+import 'package:stream_channel/message_port_channel.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 // Avoid using this from dart:html to work around dart-lang/sdk#32113.
@@ -31,17 +33,12 @@ StreamChannel postMessageChannel() {
     // running, but it's good practice to check the origin anyway.
     return message.origin == window.location.origin && message.data == "port";
   }).then((message) {
-    var port = message.ports.first;
-    var portSubscription = port.onMessage.listen((message) {
-      controller.local.sink.add(message.data);
-    });
-
-    controller.local.stream.listen((data) {
-      port.postMessage({"data": data});
-    }, onDone: () {
-      port.postMessage({"event": "done"});
-      portSubscription.cancel();
-    });
+    controller.local
+        .transformStream(StreamTransformer.fromHandlers(
+          handleData: (data, sink) => sink.add({"data": data}),
+          handleDone: (sink) => sink.add({"event": "done"}),
+        ))
+        .pipe(MessagePortChannel(message.ports.first));
   });
 
   // Send a ready message once we're listening so the host knows it's safe to

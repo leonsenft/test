@@ -47,3 +47,7 @@ dependency_overrides:
     path: ./../test_api
   test_core:
     path: ./../test_core
+  stream_channel:
+    git:
+      url: git@github.com:leonsenft/stream_channel.git
+      ref: message-port-channel
